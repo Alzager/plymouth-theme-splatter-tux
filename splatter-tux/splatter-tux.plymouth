@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=Splatter Tux
+Description=Splatter Tux on the screen.
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/splatter-tux
+ScriptFile=/usr/share/plymouth/themes/splatter-tux/splatter.script
