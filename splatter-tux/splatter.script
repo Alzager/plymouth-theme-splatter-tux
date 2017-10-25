@@ -19,7 +19,9 @@ preload_offset = 0.05;
 
 opacity_increase = 0.5; # opacity increase during fade in
 
-max_size = 0.77; # Maximum ammount of height and width that should be used
+num_res = 3; # number of reolutions available
+
+max_size = 0.8; # Maximum ammount of height and width that should be used
 
 Window.SetBackgroundTopColor (0.2, 0.2, 0.2);
 Window.SetBackgroundBottomColor (0.2, 0.2, 0.2);
@@ -49,6 +51,17 @@ fun random_array (max)
   }
 
 initialization_threshold = Math.Min(initialization_threshold, 2);
+res = 1;
+
+for (i = 0; i < num_res; i++)
+  {
+  j = num_res - i;
+  splatter = Image("splatter_" + j + "_1_1.png");
+  if (Window.GetWidth() * max_size <= splatter.GetWidth() || Window.GetHeight() * max_size <= splatter.GetHeight())
+    {
+    res = j;
+    }
+  }
 
 for (s = 1; s <= stages[0]; s++)
   {
@@ -63,7 +76,7 @@ for (s = 1; s <= stages[0]; s++)
 start_initializing[1] = 1;
 
 screen_ratio = Window.GetHeight() / Window.GetWidth();
-splatter = Image("splatter_1_1.png");
+splatter = Image("splatter_" + res + "_1_1.png");
 splatter_height = splatter.GetHeight();
 splatter_width = splatter.GetWidth();
 splatter_ratio = splatter_height / splatter_width;
@@ -239,7 +252,7 @@ fun progress_callback (duration, progress)
           initializing_started = progress;
           }
         initialized[s][i] = 1;
-        splat[s][i] = Image("splatter_" + s + "_" + order[s][i] + ".png");
+        splat[s][i] = Image("splatter_" + res + "_" + s + "_" + order[s][i] + ".png");
         scaled_splat[s][i] = splat[s][i].Scale(splatter_width_scaled, splatter_height_scaled);
         splat_sprite[s][i].SetImage(scaled_splat[s][i]);
         splat_sprite[s][i].SetOpacity(0);
