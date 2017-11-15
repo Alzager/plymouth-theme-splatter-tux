@@ -240,7 +240,6 @@ fun progress_callback (duration, progress)
     }
   for (s = 1; s <= stages[0]; s++)
     {
-    start_initializing[s + 1] = splat_sprite[s][stages[s]].GetOpacity();
     initializing_finished[s] = initialized[s][stages[s]];
     for (i = 1; i <= stages[s]; i++)
       {
@@ -261,12 +260,14 @@ fun progress_callback (duration, progress)
         splat_sprite[s][i].SetZ(s);
         }
       }
+    start_initializing[s + 1] = 1;
     for (i = 1; i <= stages[s]; i++)
       {
       if (start_initializing[s] == 1 && times[s - 1] + i * factor[s] <= progress && splat_sprite[s][i].GetOpacity() < 1 && initializing == 0)
         {
         splat_sprite[s][i].SetOpacity(Math.Min(splat_sprite[s][i].GetOpacity() + opacity_increase, 1));
         }
+      start_initializing[s + 1] = start_initializing[s + 1] * splat_sprite[s][i].GetOpacity();
       }
     }
   }
