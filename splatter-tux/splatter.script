@@ -52,6 +52,7 @@ fun random_array (max)
 
 initialization_threshold = Math.Min(initialization_threshold, 2);
 res = 1;
+rand = 0;
 
 for (i = 0; i < num_res; i++)
   {
@@ -66,10 +67,9 @@ for (i = 0; i < num_res; i++)
 for (s = 1; s <= stages[0]; s++)
   {
   factor[s] = (times[s] - times[s - 1]) / stages[s];
-  temp_order = random_array(stages[s]);
   for (i = 1; i <= stages[s]; i++)
     {
-    order[s][i] = temp_order[i];
+    order[s][i] = i;
     initialized[s][i] = 0;
     }
   }
@@ -206,6 +206,20 @@ Plymouth.SetDisplayPasswordFunction(display_password_callback);
 
 fun progress_callback (duration, progress)
   {
+  if (rand == 0)
+    {
+    rand = 1;
+    for (s = 1; s <= stages[0]; s++)
+      {
+      factor[s] = (times[s] - times[s - 1]) / stages[s];
+      temp_order = random_array(stages[s]);
+      for (i = 1; i <= stages[s]; i++)
+        {
+        order[s][i] = (temp_order[i] + Math.Int((duration + progress) * 1000)) % stages[s] + 1;
+        initialized[s][i] = 0;
+        }
+      }
+    }
   if (password_input_running == 1 && status == "normal")
     {
     password_input_running = 0;
