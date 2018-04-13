@@ -19,7 +19,7 @@ preload_offset = 0.05;
 
 opacity_increase = 0.5; # opacity increase during fade in
 
-num_res = 3; # number of reolutions available
+num_res = 5; # number of reolutions available
 
 max_size = 0.8; # Maximum ammount of height and width that should be used
 
