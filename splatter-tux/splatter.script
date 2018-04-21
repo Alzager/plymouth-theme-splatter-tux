@@ -110,10 +110,114 @@ password_input_finished = 0;
 initializing = 0;
 initializing_started = 0;
 initializing_finished = 0;
+shutdown.image = Image("shutdown_" + res + "_0.png");
+shutdown.scaled = shutdown.image.Scale(splatter_width_scaled, splatter_height_scaled);
+shutdown.sprite = Sprite();
+shutdown.sprite = Sprite(shutdown.scaled);
+shutdown.sprite.SetOpacity(0);
+prog = 0;
+dur = 0;
+count = -1;
 
 fun refresh_callback ()
   {
-    # Currently we do nothing here
+  if (Plymouth.GetMode () == "boot" || Plymouth.GetMode () == "resume")
+  {
+  progress = prog;
+  duration = dur;
+  if (rand == 0)
+    {
+    rand = 1;
+    for (s = 1; s <= stages[0]; s++)
+      {
+      factor[s] = (times[s] - times[s - 1]) / stages[s];
+      temp_order = random_array(stages[s]);
+      for (i = 1; i <= stages[s]; i++)
+        {
+        order[s][i] = (temp_order[i] + Math.Int((duration + progress) * 1000)) % stages[s] + 1;
+        initialized[s][i] = 0;
+        }
+      }
+    }
+  if (password_input_running == 1 && status == "normal")
+    {
+    password_input_running = 0;
+    password_input_finished = progress;
+    time_offset = password_input_finished;
+    time_scale = (times[stages[0]] - time_offset) / (times[stages[0]] - password_input_started);
+    times[0] = (times[0] - password_input_started) * time_scale + time_offset;
+    preload_offset = preload_offset * time_scale;
+    for (s = 1; s <= stages[0]; s++)
+      {
+      times[s] = (times[s] - password_input_started) * time_scale + time_offset;
+      factor[s] = (times[s] - times[s - 1]) / stages[s];
+      }
+    }
+  if (password_input_running == 0 && status == "password")
+    {
+    password_input_running = 1;
+    password_input_started = progress;
+    }
+  if (initializing == 1)
+    {
+    initializing = 0;
+    initializing_finished = progress;
+    time_offset = initializing_finished;
+    time_scale = (times[stages[0]] - time_offset) / (times[stages[0]] - initializing_started);
+    times[0] = (times[0] - initializing_started) * time_scale + time_offset;
+    for (s = 1; s <= stages[0]; s++)
+      {
+      times[s] = (times[s] - initializing_started) * time_scale + time_offset;
+      factor[s] = (times[s] - times[s - 1]) / stages[s];
+      }
+    }
+  for (s = 1; s <= stages[0]; s++)
+    {
+    initializing_finished[s] = initialized[s][stages[s]];
+    for (i = 1; i <= stages[s]; i++)
+      {
+      if (status == "normal" && initialized[s][i] == 0 && ((start_initializing[s] == 1 && s >= initialization_threshold) || (s < initialization_threshold && times[s - 1] + i * factor[s] <= progress + preload_offset)))
+        {
+        if (s >= initialization_threshold)
+          {
+          initializing = 1;
+          initializing_started = progress;
+          }
+        initialized[s][i] = 1;
+        splat[s][i] = Image("splatter_" + res + "_" + s + "_" + order[s][i] + ".png");
+        scaled_splat[s][i] = splat[s][i].Scale(splatter_width_scaled, splatter_height_scaled);
+        splat_sprite[s][i].SetImage(scaled_splat[s][i]);
+        splat_sprite[s][i].SetOpacity(0);
+        splat_sprite[s][i].SetX(splatter_x);
+        splat_sprite[s][i].SetY(splatter_y);
+        splat_sprite[s][i].SetZ(s);
+        }
+      }
+    start_initializing[s + 1] = 1;
+    for (i = 1; i <= stages[s]; i++)
+      {
+      if (start_initializing[s] == 1 && times[s - 1] + i * factor[s] <= progress && splat_sprite[s][i].GetOpacity() < 1 && initializing == 0)
+        {
+        splat_sprite[s][i].SetOpacity(Math.Min(splat_sprite[s][i].GetOpacity() + opacity_increase, 1));
+        }
+      start_initializing[s + 1] = start_initializing[s + 1] * splat_sprite[s][i].GetOpacity();
+      }
+    }
+  }
+  else
+  {
+  count = count + 1;
+  shutdown.image = Image("shutdown_" + res + "_" + count + ".png");
+  if (shutdown.image)
+  {
+    shutdown.scaled = shutdown.image.Scale(splatter_width_scaled, splatter_height_scaled);
+    shutdown.sprite = Sprite(shutdown.scaled);
+    shutdown.sprite.SetX(splatter_x);
+    shutdown.sprite.SetY(splatter_y);
+    shutdown.sprite.SetZ(20);
+    shutdown.sprite.SetOpacity(1);
+  }
+  }
   }
   
 Plymouth.SetRefreshFunction (refresh_callback);
@@ -206,84 +310,8 @@ Plymouth.SetDisplayPasswordFunction(display_password_callback);
 
 fun progress_callback (duration, progress)
   {
-  if (rand == 0)
-    {
-    rand = 1;
-    for (s = 1; s <= stages[0]; s++)
-      {
-      factor[s] = (times[s] - times[s - 1]) / stages[s];
-      temp_order = random_array(stages[s]);
-      for (i = 1; i <= stages[s]; i++)
-        {
-        order[s][i] = (temp_order[i] + Math.Int((duration + progress) * 1000)) % stages[s] + 1;
-        initialized[s][i] = 0;
-        }
-      }
-    }
-  if (password_input_running == 1 && status == "normal")
-    {
-    password_input_running = 0;
-    password_input_finished = progress;
-    time_offset = password_input_finished;
-    time_scale = (times[stages[0]] - time_offset) / (times[stages[0]] - password_input_started);
-    times[0] = (times[0] - password_input_started) * time_scale + time_offset;
-    preload_offset = preload_offset * time_scale;
-    for (s = 1; s <= stages[0]; s++)
-      {
-      times[s] = (times[s] - password_input_started) * time_scale + time_offset;
-      factor[s] = (times[s] - times[s - 1]) / stages[s];
-      }
-    }
-  if (password_input_running == 0 && status == "password")
-    {
-    password_input_running = 1;
-    password_input_started = progress;
-    }
-  if (initializing == 1)
-    {
-    initializing = 0;
-    initializing_finished = progress;
-    time_offset = initializing_finished;
-    time_scale = (times[stages[0]] - time_offset) / (times[stages[0]] - initializing_started);
-    times[0] = (times[0] - initializing_started) * time_scale + time_offset;
-    for (s = 1; s <= stages[0]; s++)
-      {
-      times[s] = (times[s] - initializing_started) * time_scale + time_offset;
-      factor[s] = (times[s] - times[s - 1]) / stages[s];
-      }
-    }
-  for (s = 1; s <= stages[0]; s++)
-    {
-    initializing_finished[s] = initialized[s][stages[s]];
-    for (i = 1; i <= stages[s]; i++)
-      {
-      if (status == "normal" && initialized[s][i] == 0 && ((start_initializing[s] == 1 && s >= initialization_threshold) || (s < initialization_threshold && times[s - 1] + i * factor[s] <= progress + preload_offset)))
-        {
-        if (s >= initialization_threshold)
-          {
-          initializing = 1;
-          initializing_started = progress;
-          }
-        initialized[s][i] = 1;
-        splat[s][i] = Image("splatter_" + res + "_" + s + "_" + order[s][i] + ".png");
-        scaled_splat[s][i] = splat[s][i].Scale(splatter_width_scaled, splatter_height_scaled);
-        splat_sprite[s][i].SetImage(scaled_splat[s][i]);
-        splat_sprite[s][i].SetOpacity(0);
-        splat_sprite[s][i].SetX(splatter_x);
-        splat_sprite[s][i].SetY(splatter_y);
-        splat_sprite[s][i].SetZ(s);
-        }
-      }
-    start_initializing[s + 1] = 1;
-    for (i = 1; i <= stages[s]; i++)
-      {
-      if (start_initializing[s] == 1 && times[s - 1] + i * factor[s] <= progress && splat_sprite[s][i].GetOpacity() < 1 && initializing == 0)
-        {
-        splat_sprite[s][i].SetOpacity(Math.Min(splat_sprite[s][i].GetOpacity() + opacity_increase, 1));
-        }
-      start_initializing[s + 1] = start_initializing[s + 1] * splat_sprite[s][i].GetOpacity();
-      }
-    }
+    dur = duration;
+    prog = progress;
   }
 
 Plymouth.SetBootProgressFunction(progress_callback);
