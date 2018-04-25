@@ -1,18 +1,23 @@
 #----------------------------------------- Configuration --------------------------------
 max_size = 0.8; # Maximum ammount of height and width that should be used
-Window.SetBackgroundTopColor(0.2, 0.2, 0.2);
-Window.SetBackgroundBottomColor(0.2, 0.2, 0.2);
+
+background.red = 0.2;
+background.green = 0.2;
+background.blue = 0.2;
 
 start_progress = 0.05;
 end_progress = 0.83;
 opacity_increase = 0.5; # Opacity increase during fade in
+background_fade_step = 0.05; # Percentage of each background fade in/out step
 #----------------------------------------- End Configuration --------------------------------
 
 res = 1;
+background_fade = 0;
 # Initialize boot
 if (Plymouth.GetMode() == "boot" || Plymouth.GetMode() == "resume")
 {
-	randomized = 0;
+	Window.SetBackgroundTopColor(0, 0, 0);
+	Window.SetBackgroundBottomColor(0, 0, 0);
 	stage.number = 1;
 	# Get correct resolution for images
 	while (1)
@@ -46,7 +51,9 @@ if (Plymouth.GetMode() == "boot" || Plymouth.GetMode() == "resume")
 			stage.number = stage.number - 1;
 			break;
 		}
+	randomized[stage.number] = 0;
 	}
+	randomized[1] = 0;
 
 	# Get number of splatters for each stage
 	for (s = 1; s <= stage.number; s++)
@@ -85,16 +92,18 @@ if (Plymouth.GetMode() == "boot" || Plymouth.GetMode() == "resume")
 # Initialize shutdown
 if (Plymouth.GetMode() == "shutdown" || Plymouth.GetMode() == "suspend")
 {
+	Window.SetBackgroundTopColor(background.red, background.green, background.blue);
+	Window.SetBackgroundBottomColor(background.red, background.green, background.blue);
 	# Get correct resolution for images
 	while (1)
 	{
-		shutdown.image = Image("shutdown_" + res + "_0.png");
-		if (! shutdown.image)
+		background.image = Image("background_" + res + ".png");
+		if (! background.image)
 		{
 			res = res - 1;
 			break;
 		}
-		if (Window.GetWidth() * max_size < shutdown.image.GetWidth() || Window.GetHeight() * max_size < shutdown.image.GetHeight())
+		if (Window.GetWidth() * max_size < background.image.GetWidth() || Window.GetHeight() * max_size < background.image.GetHeight())
 		{
 			res = res - 1;
 			break;
@@ -103,15 +112,22 @@ if (Plymouth.GetMode() == "shutdown" || Plymouth.GetMode() == "suspend")
 	}
 
 	# Get positioning coordinates
-	shutdown.image = Image("shutdown_" + res + "_0.png");
-	splatter_x = (Window.GetWidth() - shutdown.image.GetWidth()) / 2;
-	splatter_y = (Window.GetHeight() - shutdown.image.GetHeight()) / 2;
+	background.image = Image("background_" + res + ".png");
+	splatter_x = (Window.GetWidth() - background.image.GetWidth()) / 2;
+	splatter_y = (Window.GetHeight() - background.image.GetHeight()) / 2;
 
 	# Load sprite
+	background.sprite = Sprite();
+	background.sprite.SetImage(background.image);
+	background.sprite.SetPosition(splatter_x, splatter_y, 10);
+	background.sprite.SetOpacity(1);
+	
+	shutdown.image = Image("shutdown_" + res + "_1.png");
 	shutdown.sprite = Sprite();
 	shutdown.sprite.SetImage(shutdown.image);
 	shutdown.sprite.SetPosition(splatter_x, splatter_y, 20);
-	count_shutdown = -1;
+	shutdown.sprite.SetOpacity(0);
+	count_shutdown = -5;
 }
 
 # Create randomized array
@@ -141,11 +157,17 @@ fun random_array (max)
 # Boot animation
 fun boot_animation (duration, progress)
 {
-	if (randomized == 0)
+	if (background_fade < 1 && start_progress <= progress)
 	{
-		randomized = 1;
-		for (s = 1; s <= stage.number; s++)
+		background_fade = Math.Clamp(background_fade + background_fade_step, 0, 1);
+		Window.SetBackgroundTopColor(background.red * background_fade, background.green * background_fade, background.blue * background_fade);
+		Window.SetBackgroundBottomColor(background.red * background_fade, background.green * background_fade, background.blue * background_fade);
+	}
+	for (s = 1; s <= stage.number; s++)
+	{
+		if (randomized[s] == 0 && stage[s].splatter[1].progress <= progress)
 		{
+			randomized[s] = 1;
 			temp_order = random_array(stage[s].number);
 			for (i = 1; i <= stage[s].number; i++)
 			{
@@ -153,9 +175,6 @@ fun boot_animation (duration, progress)
 				stage[s].splatter[i].initialized = 0;
 			}
 		}
-	}
-	for (s = 1; s <= stage.number; s++)
-	{
 		for (i = 1; i <= stage[s].number; i++)
 		{
 			if (stage[s].splatter[i].progress <= progress && stage[s].splatter[i].initialized == 0)
@@ -184,6 +203,18 @@ fun shutdown_animation ()
 		shutdown.sprite.SetImage(shutdown.image);
 		shutdown.sprite.SetPosition(splatter_x, splatter_y, 20);
 		shutdown.sprite.SetOpacity(1);
+		background.sprite.SetOpacity(1);
+	}
+	else
+	{
+		if(count_shutdown > 1)
+		{
+			background_fade = Math.Clamp(background_fade + background_fade_step, 0, 1);
+			background.sprite.SetOpacity(0);
+			shutdown.sprite.SetOpacity(0);
+			Window.SetBackgroundTopColor(background.red * (1 - background_fade), background.green * (1 - background_fade), background.blue * (1 - background_fade));
+			Window.SetBackgroundBottomColor(background.red * (1 - background_fade), background.green * (1 - background_fade), background.blue * (1 - background_fade));
+		}
 	}
 }
 
