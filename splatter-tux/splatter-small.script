@@ -11,6 +11,11 @@ opacity_increase = 0.5; # Opacity increase during fade in
 background_fade_step = 0.05; # Percentage of each background fade in/out step
 #----------------------------------------- End Configuration --------------------------------
 
+
+foreground.image = Image("foreground.png");
+foreground.sprite = Sprite();
+foreground.sprite.SetImage(foreground.image);
+foreground.sprite.SetPosition((Window.GetWidth() - foreground.image.GetWidth()) / 2, (Window.GetHeight() - foreground.image.GetHeight()) / 2, 10000);
 res = 1;
 background_fade = 0;
 # Initialize boot
@@ -18,6 +23,7 @@ if (Plymouth.GetMode() == "boot" || Plymouth.GetMode() == "resume")
 {
 	Window.SetBackgroundTopColor(0, 0, 0);
 	Window.SetBackgroundBottomColor(0, 0, 0);
+	foreground.sprite.SetOpacity(0);
 	stage.number = 1;
 	# Get correct resolution for images
 	while (1)
@@ -94,6 +100,7 @@ if (Plymouth.GetMode() == "shutdown" || Plymouth.GetMode() == "suspend")
 {
 	Window.SetBackgroundTopColor(background.red, background.green, background.blue);
 	Window.SetBackgroundBottomColor(background.red, background.green, background.blue);
+	foreground.sprite.SetOpacity(1);
 	# Get correct resolution for images
 	while (1)
 	{
@@ -162,6 +169,7 @@ fun boot_animation (duration, progress)
 		background_fade = Math.Clamp(background_fade + background_fade_step, 0, 1);
 		Window.SetBackgroundTopColor(background.red * background_fade, background.green * background_fade, background.blue * background_fade);
 		Window.SetBackgroundBottomColor(background.red * background_fade, background.green * background_fade, background.blue * background_fade);
+		foreground.sprite.SetOpacity(background_fade);
 	}
 	for (s = 1; s <= stage.number; s++)
 	{
@@ -214,6 +222,7 @@ fun shutdown_animation ()
 			shutdown.sprite.SetOpacity(0);
 			Window.SetBackgroundTopColor(background.red * (1 - background_fade), background.green * (1 - background_fade), background.blue * (1 - background_fade));
 			Window.SetBackgroundBottomColor(background.red * (1 - background_fade), background.green * (1 - background_fade), background.blue * (1 - background_fade));
+			foreground.sprite.SetOpacity(1 - background_fade);
 		}
 	}
 }
