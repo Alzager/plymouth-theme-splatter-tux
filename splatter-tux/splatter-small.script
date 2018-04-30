@@ -6,24 +6,22 @@ background.green = 0.2;
 background.blue = 0.2;
 
 start_progress = 0.05;
-end_progress = 0.83;
+end_progress = 0.95;
 opacity_increase = 0.5; # Opacity increase during fade in
 background_fade_step = 0.05; # Percentage of each background fade in/out step
 #----------------------------------------- End Configuration --------------------------------
 
-
-foreground.image = Image("foreground.png");
-foreground.sprite = Sprite();
-foreground.sprite.SetImage(foreground.image);
-foreground.sprite.SetPosition((Window.GetWidth() - foreground.image.GetWidth()) / 2, (Window.GetHeight() - foreground.image.GetHeight()) / 2, 10000);
+entropy = 0;
+duration = 0;
+progress = 0;
 res = 1;
 background_fade = 0;
+
 # Initialize boot
 if (Plymouth.GetMode() == "boot" || Plymouth.GetMode() == "resume")
 {
 	Window.SetBackgroundTopColor(0, 0, 0);
 	Window.SetBackgroundBottomColor(0, 0, 0);
-	foreground.sprite.SetOpacity(0);
 	stage.number = 1;
 	# Get correct resolution for images
 	while (1)
@@ -57,9 +55,7 @@ if (Plymouth.GetMode() == "boot" || Plymouth.GetMode() == "resume")
 			stage.number = stage.number - 1;
 			break;
 		}
-	randomized[stage.number] = 0;
 	}
-	randomized[1] = 0;
 
 	# Get number of splatters for each stage
 	for (s = 1; s <= stage.number; s++)
@@ -91,6 +87,9 @@ if (Plymouth.GetMode() == "boot" || Plymouth.GetMode() == "resume")
 		{
 			number_splatters_so_far = number_splatters_so_far + 1;
 			stage[s].splatter[i].progress = number_splatters_so_far / number_splatters * end + start_progress;
+			stage[s].order[i] = 0;
+			stage[s].splatter[i].initialized = 0;
+			unused[s][i] = i;
 		}
 	}
 }
@@ -100,7 +99,6 @@ if (Plymouth.GetMode() == "shutdown" || Plymouth.GetMode() == "suspend")
 {
 	Window.SetBackgroundTopColor(background.red, background.green, background.blue);
 	Window.SetBackgroundBottomColor(background.red, background.green, background.blue);
-	foreground.sprite.SetOpacity(1);
 	# Get correct resolution for images
 	while (1)
 	{
@@ -137,56 +135,93 @@ if (Plymouth.GetMode() == "shutdown" || Plymouth.GetMode() == "suspend")
 	count_shutdown = -5;
 }
 
-# Create randomized array
-fun random_array (max)
+# General initialization
+
+foreground.image.number = 0;
+while (1)
 {
-	max_random = max;
-	for (i = 0; i <= max; i++)
+	foreground.image.number = foreground.image.number + 1;
+	foreground.image[foreground.image.number] = Image("foreground_" + foreground.image.number + ".png");
+	if (! foreground.image[foreground.image.number])
 	{
-		to_mix[i] = 0;
+		foreground.image.number = foreground.image.number - 1;
+		break;
 	}
-	for (i = 1; i <= max; i++)
-	{
-		random_position = Math.Int((Math.Random() * max_random)) + 1;
-		max_random = max_random - 1;
-		for (j = 1; j <= random_position; j++)
-		{
-			if (to_mix[j] > 0)
-			{
-				random_position = random_position + 1;
-			}
-		}
-		to_mix[random_position] = i;
-	}
-	return to_mix;
 }
+foreground.number.x = Window.GetWidth() / foreground.image[1].GetWidth();
+if (foreground.number.x == Math.Int(foreground.number.x))
+{
+	foreground.number.x = foreground.number.x + 2;
+}
+else
+{
+	foreground.number.x = Math.Int(foreground.number.x) + 3;
+}
+foreground.number.y = Window.GetHeight() / foreground.image[1].GetHeight() / 2;
+if (foreground.number.y == Math.Int(foreground.number.y))
+{
+	foreground.number.y = foreground.number.y * 2 + 2;
+}
+else
+{
+	foreground.number.y = Math.Int(foreground.number.y) * 2 + 4;
+}
+for (x = 1; x <= foreground.number.x; x++)
+{
+	for (y = 1; y <= foreground.number.y; y++)
+	{
+		foreground.sprite[x][y] = Sprite();
+		foreground.sprite[x][y].SetPosition((Window.GetWidth() - foreground.image[1].GetWidth()) / 2 + (x - (foreground.number.x + 1) / 2) * foreground.image[1].GetWidth(), (Window.GetHeight() - foreground.image[1].GetHeight()) / 2 + (y - (foreground.number.y + 1) / 2) * foreground.image[1].GetHeight(), 9000);
+	}
+}
+foreground.initialized = 0;
 
 # Boot animation
 fun boot_animation (duration, progress)
 {
-	if (background_fade < 1 && start_progress <= progress)
+	if (foreground.initialized == 0)
+	{
+		foreground.initialized = -1;
+		for (r = 0; r <= entropy * 10000; r++)
+		{
+			Math.Random();
+		}
+		for (x = 1; x <= foreground.number.x; x++)
+		{
+			for (y = 1; y <= foreground.number.y; y++)
+			{
+				foreground.sprite[x][y].SetImage(foreground.image[Math.Int((Math.Random() % 1 * foreground.image.number)) + 1]);
+				foreground.SetOpacity(0);
+			}
+		}
+		foreground.initialized = 1;
+	}
+	if (background_fade < 1 && start_progress <= progress && foreground.initialized == 1)
 	{
 		background_fade = Math.Clamp(background_fade + background_fade_step, 0, 1);
 		Window.SetBackgroundTopColor(background.red * background_fade, background.green * background_fade, background.blue * background_fade);
 		Window.SetBackgroundBottomColor(background.red * background_fade, background.green * background_fade, background.blue * background_fade);
-		foreground.sprite.SetOpacity(background_fade);
+		for (x = 1; x <= foreground.number.x; x++)
+		{
+			for (y = 1; y <= foreground.number.y; y++)
+			{
+				foreground.sprite[x][y].SetOpacity(background_fade);
+			}
+		}
 	}
 	for (s = 1; s <= stage.number; s++)
 	{
-		if (randomized[s] == 0 && stage[s].splatter[1].progress <= progress)
-		{
-			randomized[s] = 1;
-			temp_order = random_array(stage[s].number);
-			for (i = 1; i <= stage[s].number; i++)
-			{
-				stage[s].order[i] = (temp_order[i] + Math.Int((duration + progress) * 1000)) % stage[s].number  + 1;
-				stage[s].splatter[i].initialized = 0;
-			}
-		}
 		for (i = 1; i <= stage[s].number; i++)
 		{
 			if (stage[s].splatter[i].progress <= progress && stage[s].splatter[i].initialized == 0)
 			{
+				stage[s].splatter[i].initialized = -1;
+				random_position = Math.Int(((Math.Random() + entropy) % 1 * (stage[s].number - i + 1))) + 1;
+				stage[s].order[i] = unused[s][random_position];
+				for (j = random_position; j <= stage[s].number; j++)
+				{
+					unused[s][j] = unused[s][j + 1];
+				}
 				stage[s].splatter[i].sprite = Sprite();
 				stage[s].splatter[i].sprite.SetImage(stage[s].splatter[stage[s].order[i]].image);
 				stage[s].splatter[i].sprite.SetPosition(splatter_x, splatter_y, s);
@@ -204,6 +239,23 @@ fun boot_animation (duration, progress)
 # Shutdown animation
 fun shutdown_animation ()
 {
+	if (foreground.initialized == 0)
+	{
+		foreground.initialized = -1;
+		for (r = 0; r <= entropy * 10000; r++)
+		{
+			Math.Random();
+		}
+		for (x = 1; x <= foreground.number.x; x++)
+		{
+			for (y = 1; y <= foreground.number.y; y++)
+			{
+				foreground.sprite[x][y].SetImage(foreground.image[Math.Int((Math.Random() % 1 * 4)) + 1]);
+				foreground.SetOpacity(1);
+			}
+		}
+		foreground.initialized = 1;
+	}
 	count_shutdown = count_shutdown + 1;
 	shutdown.image = Image("shutdown_" + res + "_" + count_shutdown + ".png");
 	if (shutdown.image)
@@ -215,20 +267,32 @@ fun shutdown_animation ()
 	}
 	else
 	{
-		if(count_shutdown > 1)
+		if(count_shutdown > 1 && foreground.initialized == 1)
 		{
 			background_fade = Math.Clamp(background_fade + background_fade_step, 0, 1);
 			background.sprite.SetOpacity(0);
 			shutdown.sprite.SetOpacity(0);
 			Window.SetBackgroundTopColor(background.red * (1 - background_fade), background.green * (1 - background_fade), background.blue * (1 - background_fade));
 			Window.SetBackgroundBottomColor(background.red * (1 - background_fade), background.green * (1 - background_fade), background.blue * (1 - background_fade));
-			foreground.sprite.SetOpacity(1 - background_fade);
+			for (x = 1; x <= foreground.number.x; x++)
+			{
+				for (y = 1; y <= foreground.number.y; y++)
+				{
+					foreground.sprite[x][y].SetOpacity(1 - background_fade);
+				}
+			}
 		}
 	}
 }
 
 fun refresh_callback ()
 {
+	local.duration = global.duration;
+	local.progress = global.progress;
+	if (Plymouth.GetMode() == "boot" || Plymouth.GetMode() == "resume")
+	{
+		boot_animation(duration, progress);
+	}
 	if (Plymouth.GetMode() == "shutdown" || Plymouth.GetMode() == "suspend")
 	{
 		shutdown_animation();
@@ -325,10 +389,9 @@ Plymouth.SetDisplayPasswordFunction(display_password_callback);
 
 fun progress_callback (duration, progress)
 {
-	if (Plymouth.GetMode() == "boot" || Plymouth.GetMode() == "resume")
-	{
-		boot_animation(duration, progress);
-	}
+	entropy = local.duration * 100000 % 1;
+	global.duration = local.duration;
+	global.progress = local.progress;
 }
 
 Plymouth.SetBootProgressFunction(progress_callback);
